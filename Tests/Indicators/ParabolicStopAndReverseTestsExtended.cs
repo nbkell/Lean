@@ -29,7 +29,7 @@ namespace QuantConnect.Tests.Indicators
             return new ParabolicStopAndReverseExtended();
         }
 
-        protected override string TestFileName => "spy_sarext.txt";
+        protected override string TestFileName => "spy_sarext.csv";
 
         protected override string TestColumnName => "SAREXT"; 
     }
