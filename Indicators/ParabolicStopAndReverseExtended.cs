@@ -19,7 +19,7 @@ using QuantConnect.Data.Market;
 namespace QuantConnect.Indicators
 {
     /// <summary>
-    /// Parabolic SAR Indicator 
+    /// Parabolic SAR Extended Indicator 
     /// Based on TA-Lib implementation
     /// </summary>
     public class ParabolicStopAndReverseExtended : BarIndicator, IIndicatorWarmUpPeriodProvider
@@ -41,7 +41,7 @@ namespace QuantConnect.Indicators
         private readonly decimal _afMaxLong;
 
         /// <summary>
-        /// $ Create a new Parabolic SAR Extended
+        /// Create a new Parabolic SAR Extended
         /// </summary>
         /// <param name="name">The name of the Parabolic Stop and Reverse Extended indicator</param>
         /// <param name="sarStart">The starting value for the Parabolic Stop and Reverse indicator</param>
@@ -67,7 +67,7 @@ namespace QuantConnect.Indicators
         }
 
         /// <summary>
-        /// $ Create a new Parabolic SAR Extended
+        /// Create a new Parabolic SAR Extended
         /// </summary>
         /// <param name="sarStart">The starting value for the Parabolic Stop and Reverse indicator</param>
         /// <param name="offsetOnReverse">The offset value to be applied on reverse </param>
@@ -116,7 +116,7 @@ namespace QuantConnect.Indicators
             if (Samples == 1){
 
                  _previousBar = input;
-                // Makes sense to return _sarInit when its non-negative
+                // Makes sense to return _sarInit when its non-zero
                 if(_sarInit > 0)
                     return _sarInit; 
                 else if(_sarInit < 0)
@@ -125,20 +125,19 @@ namespace QuantConnect.Indicators
                 // Otherwise, return default
                 return input.Close; 
             }
-            // On second iteration we initiate the position the extreme point and the SAR
+
+            // On second iteration we initiate the position of extreme point SAR
             if (Samples == 2)
             {
                 Init(input);
                 _previousBar = input; 
             } 
+
             if (_isLong)   
-            {
                 HandleLongPosition(input);
-            }
             else
-            {
                 HandleShortPosition(input);
-            }
+        
             _previousBar = input; 
             return _outputSar; 
         }
@@ -163,23 +162,18 @@ namespace QuantConnect.Indicators
            else
            {
                 _isLong = !HasNegativeDM(currentBar); 
-                //_isLong = currentBar.Close >= _previousBar.Close; 
                 _sar = _isLong ? _previousBar.Low : _previousBar.High;
            }
 
             // initialize extreme point 
-            if(_isLong) 
-                _ep =  currentBar.High; 
-            else  
-                _ep =  currentBar.Low;
-
+            _ep = _isLong ? currentBar.High : currentBar.Low; 
         }
 
         /// <summary>
-        /// Returns true if DM- > 0 between today and yesterday's tradebar (false otherwise)
+        /// Returns true if DM > 0 between today and yesterday's tradebar (false otherwise)
         /// </summary>
         private bool HasNegativeDM(IBaseDataBar currentBar){
-            if(currentBar.Low >= _previousBar.Low)
+            if (currentBar.Low >= _previousBar.Low)
                 return false;
             decimal diff1 = currentBar.High - _previousBar.High; 
             decimal diff2 = _previousBar.Low - currentBar.Low; 
@@ -256,7 +250,7 @@ namespace QuantConnect.Indicators
             // Switch to long if the high penetrates the SAR value.
             if (currentBar.High >= _sar)
             {
-                // Switch and Overide the SAR with the ep
+                // Switch and overide the SAR with the ep
                 _isLong = true;
                 _sar = _ep;
 
@@ -301,6 +295,7 @@ namespace QuantConnect.Indicators
 
                 // Calculate the new SAR
                 _sar = _sar + _afShort * (_ep - _sar);
+
                 // Make sure the new SAR is within yesterday's and today's range.
                 if (_sar < _previousBar.High)
                     _sar = _previousBar.High;
