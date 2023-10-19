@@ -16,8 +16,6 @@
 using System;
 using QuantConnect.Data.Market;
 
-// add a comment
-
 namespace QuantConnect.Indicators
 {
     /// <summary>
@@ -45,14 +43,6 @@ namespace QuantConnect.Indicators
         /// <summary>
         /// Create a new Parabolic SAR Extended
         /// </summary>
-<<<<<<< HEAD
-        /// <param name="name">The name of this indicator</param>
-        /// <param name="afStart">Acceleration factor start value</param>
-        /// <param name="afIncrement">Acceleration factor increment value</param>
-        /// <param name="afMax">Acceleration factor max value</param>
-        public ParabolicStopAndReverseExtended(string name, decimal afStart = 0.02m, decimal afIncrement = 0.02m, decimal afMax = 0.2m)
-            : base(name)
-=======
         /// <param name="name">The name of the Parabolic Stop and Reverse Extended indicator</param>
         /// <param name="sarStart">The starting value for the Parabolic Stop and Reverse indicator</param>
         /// <param name="offsetOnReverse">The offset value to be applied on reverse </param>
@@ -62,25 +52,9 @@ namespace QuantConnect.Indicators
         /// <param name="afStartLong">The starting acceleration factor for long positions</param>
         /// <param name="afIncrementLong">The increment value for the acceleration factor for long positions</param>
         /// <param name="afMaxLong">The maximum value for the acceleration factor for long positions</param>
-<<<<<<< HEAD
-        public ParabolicStopAndReverseExtended
-        (
-            string name, 
-            decimal sarStart = 0.0m, 
-            decimal offsetOnReverse = 0.0m, 
-            decimal afStartShort = 0.02m, 
-            decimal afIncrementShort = 0.02m, 
-            decimal afMaxShort = 0.2m, 
-            decimal afStartLong = 0.02m, 
-            decimal afIncrementLong = 0.02m, 
-            decimal afMaxLong = 0.2m
-        ) : base(name)
->>>>>>> set up SAREX constructor
-=======
         public ParabolicStopAndReverseExtended(string name, decimal sarStart = 0.0m, decimal offsetOnReverse = 0.0m, 
             decimal afStartShort = 0.02m, decimal afIncrementShort = 0.02m, decimal afMaxShort = 0.2m, 
             decimal afStartLong = 0.02m, decimal afIncrementLong = 0.02m, decimal afMaxLong = 0.2m) : base(name)
->>>>>>> added api for QCAlgo
         {
             _sarInit = sarStart;
             _offsetOnReverse = offsetOnReverse;  
