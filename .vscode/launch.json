@@ -31,10 +31,7 @@
             "cwd": "${workspaceFolder}/Launcher/bin/Debug/",
             "stopAtEntry": false,
             "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "env" : {
-                "PYTHONNET_PYDLL" : "/Users/nat/anaconda3/envs/py38/lib/libpython3.8.dylib"
-            }
+            "internalConsoleOptions": "neverOpen"
         },
         {
             "name": "Attach to Python",
