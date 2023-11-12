@@ -14,6 +14,8 @@
 */
 
 using System;
+using QLNet;
+using QuantConnect.Data.Fundamental;
 using QuantConnect.Data.Market;
 
 namespace QuantConnect.Indicators
@@ -27,7 +29,7 @@ namespace QuantConnect.Indicators
         private bool _isLong;
         private IBaseDataBar _previousBar;
         private decimal _sar;
-        private decimal _ep;
+        private decimal _extremePoint;
         private decimal _outputSar;
         private decimal _afShort;
         private decimal _afLong;
@@ -113,12 +115,15 @@ namespace QuantConnect.Indicators
         protected override decimal ComputeNextValue(IBaseDataBar input)
         {
             // On first iteration we can’t produce an SAR value so we save the current bar and return zero
-            if (Samples == 1){
+            if (Samples == 1)
+            {
 
                  _previousBar = input;
                 // Makes sense to return _sarInit when its non-zero
-                if (_sarInit != 0) 
-                    return Math.Abs(_sarInit);
+                if (_sarInit != 0)
+                {
+                    return _sarInit;
+                }
                 // Otherwise, return default
                 return input.Close; 
             }
@@ -130,11 +135,14 @@ namespace QuantConnect.Indicators
                 _previousBar = input; 
             } 
 
-            if (_isLong)   
+            if (_isLong) 
+            {
                 HandleLongPosition(input);
+            }
             else
+            {
                 HandleShortPosition(input);
-        
+            }
             _previousBar = input; 
             return _outputSar; 
         }
@@ -158,23 +166,46 @@ namespace QuantConnect.Indicators
            // same set up as standard PSAR when _sarInit = 0 
            else
            {
-                _isLong = !HasNegativeDM(currentBar); 
+                _isLong = !HasNegativeDirectionalMovement(currentBar); 
                 _sar = _isLong ? _previousBar.Low : _previousBar.High;
            }
 
             // initialize extreme point 
-            _ep = _isLong ? currentBar.High : currentBar.Low; 
+            _extremePoint = _isLong ? currentBar.High : currentBar.Low; 
         }
 
         /// <summary>
-        /// Returns true if DM > 0 between today and yesterday's tradebar (false otherwise)
+        /// Returns true if Directional Movement > 0 between today and yesterday's tradebar (false otherwise)
         /// </summary>
-        private bool HasNegativeDM(IBaseDataBar currentBar){
+        private bool HasNegativeDirectionalMovement(IBaseDataBar currentBar){
             if (currentBar.Low >= _previousBar.Low)
-                return false;
+            {
+                return false; 
+            }
             var highDiff = currentBar.High - _previousBar.High; 
             var lowDiff = _previousBar.Low - currentBar.Low; 
             return highDiff < lowDiff; 
+        } 
+        
+        /// <summary>
+        /// Subroutine that adjusts SAR value to be within today and yesterday's high
+        /// (resp. low) bar values at the end of long (resp. short) position updates. 
+        /// </summary>
+        private void AdjustWithinRecentRange(IBaseDataBar currentBar){ 
+            if(_isLong)
+            { 
+                if (_sar > _previousBar.Low)
+                    _sar = _previousBar.Low;
+                if (_sar > currentBar.Low)
+                    _sar = currentBar.Low;
+            }
+            else
+            {
+                if (_sar < _previousBar.High)
+                    _sar = _previousBar.High;
+                if (_sar < currentBar.High)
+                    _sar = currentBar.High;
+            }
         }
 
         /// <summary>
@@ -187,14 +218,11 @@ namespace QuantConnect.Indicators
             {
                 // Switch and Overide the SAR with the ep
                 _isLong = false;
-                _sar = _ep;
+                _sar = _extremePoint;
 
                 // Make sure the overide SAR is within yesterday's and today's range.
-                if (_sar < _previousBar.High)
-                    _sar = _previousBar.High;
-                if (_sar < currentBar.High)
-                    _sar = currentBar.High;
-
+                AdjustWithinRecentRange(currentBar); 
+               
                 // Output the overide SAR 
                 if(_offsetOnReverse != 0.0m)
                     _sar += _sar * _offsetOnReverse;
@@ -202,16 +230,13 @@ namespace QuantConnect.Indicators
 
                 // Adjust af and ep
                 _afShort = _afInitShort;
-                _ep = currentBar.Low;
+                _extremePoint = currentBar.Low;
 
                 // Calculate the new SAR
-                _sar = _sar + _afShort * (_ep - _sar);
+                _sar = _sar + _afShort * (_extremePoint - _sar);
 
                 // Make sure the new SAR is within yesterday's and today's range.
-                if (_sar < _previousBar.High)
-                    _sar = _previousBar.High;
-                if (_sar < currentBar.High)
-                    _sar = currentBar.High;
+                 AdjustWithinRecentRange(currentBar); 
             }
             // No switch
             else
@@ -220,22 +245,18 @@ namespace QuantConnect.Indicators
                 _outputSar = _sar;
 
                 // Adjust af and ep.
-                if (currentBar.High > _ep)
+                if (currentBar.High > _extremePoint)
                 {
-                    _ep = currentBar.High;
+                    _extremePoint = currentBar.High;
                     _afLong += _afIncrementLong;
-                    if (_afLong > _afMaxLong)
-                        _afLong = _afMaxLong;
+                    _afLong = Math.Min(_afLong, _afMaxLong); 
                 }
 
                 // Calculate the new SAR
-                _sar = _sar + _afLong * (_ep - _sar);
+                _sar = _sar + _afLong * (_extremePoint - _sar);
 
                 // Make sure the new SAR is within yesterday's and today's range.
-                if (_sar > _previousBar.Low)
-                    _sar = _previousBar.Low;
-                if (_sar > currentBar.Low)
-                    _sar = currentBar.Low;
+                AdjustWithinRecentRange(currentBar); 
             }
         }
 
@@ -249,31 +270,28 @@ namespace QuantConnect.Indicators
             {
                 // Switch and overide the SAR with the ep
                 _isLong = true;
-                _sar = _ep;
+                _sar = _extremePoint;
 
                 // Make sure the overide SAR is within yesterday's and today's range.
-                if (_sar > _previousBar.Low)
-                    _sar = _previousBar.Low;
-                if (_sar > currentBar.Low)
-                    _sar = currentBar.Low;
+                AdjustWithinRecentRange(currentBar); 
 
                 // Output the overide SAR 
                 if(_offsetOnReverse != 0.0m)
+                {
                     _sar -= _sar * _offsetOnReverse;
+                }
                 _outputSar = _sar;
 
                 // Adjust af and ep
                 _afLong = _afInitLong;
-                _ep = currentBar.High;
+                _extremePoint = currentBar.High;
 
                 // Calculate the new SAR
-                _sar = _sar + _afLong * (_ep - _sar);
+                _sar = _sar + _afLong * (_extremePoint - _sar);
 
                 // Make sure the new SAR is within yesterday's and today's range.
-                if (_sar > _previousBar.Low)
-                    _sar = _previousBar.Low;
-                if (_sar > currentBar.Low)
-                    _sar = currentBar.Low;
+                AdjustWithinRecentRange(currentBar); 
+
             }
             //No switch
             else
@@ -281,23 +299,19 @@ namespace QuantConnect.Indicators
                 // Output the SAR (was calculated in the previous iteration)
                 _outputSar = -_sar;
 
-                // Adjust af and ep.
-                if (currentBar.Low < _ep)
+                // Adjust acceleration factor and extreme point  
+                if (currentBar.Low < _extremePoint)
                 {
-                    _ep = currentBar.Low;
+                    _extremePoint = currentBar.Low;
                     _afShort += _afIncrementShort;
-                    if (_afShort > _afMaxShort)
-                        _afShort = _afMaxShort;
+                    _afShort = Math.Min(_afShort, _afMaxShort); 
                 }
 
                 // Calculate the new SAR
-                _sar = _sar + _afShort * (_ep - _sar);
+                _sar = _sar + _afShort * (_extremePoint - _sar);
 
                 // Make sure the new SAR is within yesterday's and today's range.
-                if (_sar < _previousBar.High)
-                    _sar = _previousBar.High;
-                if (_sar < currentBar.High)
-                    _sar = currentBar.High;
+                AdjustWithinRecentRange(currentBar); 
             }
         }
     }
